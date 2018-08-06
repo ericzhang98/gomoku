@@ -3,11 +3,12 @@ import pygame
 from randplay import *
 from mcts import *
 
+# maintains current game state and interactions
 class Board:
     def __init__(self):
         self.grid_size = 26
         self.start_x, self.start_y = 30, 50
-        self.edge_size = self.grid_size / 2
+        self.edge_size = 0
         self.grid_count = 19
         self.piece = 'b'
         self.winner = None
@@ -56,40 +57,41 @@ class Board:
     def semi_autoplay(self):
         if not self.game_over:
             #Optional: Change this to MCTS AI and see whether you can win
-            player1 = Randplay(self.grid, self.piece)
+            player1 = MCTS(self.grid, self.piece)
             r,c = player1.make_move()
             print("Semi-Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
-            self.check_win(r, c)   
+            self.check_win(r, c)
+    # check if a move causes a win
     def check_win(self, r, c):
-        n_count = self.get_continuous_count(r, c, -1, 0)
-        s_count = self.get_continuous_count(r, c, 1, 0)
-        e_count = self.get_continuous_count(r, c, 0, 1)
-        w_count = self.get_continuous_count(r, c, 0, -1)
-        se_count = self.get_continuous_count(r, c, 1, 1)
-        nw_count = self.get_continuous_count(r, c, -1, -1)
-        ne_count = self.get_continuous_count(r, c, -1, 1)
-        sw_count = self.get_continuous_count(r, c, 1, -1)
+        def get_continuous_count(r, c, dr, dc):
+            piece = self.grid[r][c]
+            result = 0
+            i = 1
+            while True:
+                new_r = r + dr * i
+                new_c = c + dc * i
+                if 0 <= new_r < self.grid_count and 0 <= new_c < self.grid_count:
+                    if self.grid[new_r][new_c] == piece:
+                        result += 1
+                    else:
+                        break
+                else:
+                    break
+                i += 1
+            return result
+        n_count = get_continuous_count(r, c, -1, 0)
+        s_count = get_continuous_count(r, c, 1, 0)
+        e_count = get_continuous_count(r, c, 0, 1)
+        w_count = get_continuous_count(r, c, 0, -1)
+        se_count = get_continuous_count(r, c, 1, 1)
+        nw_count = get_continuous_count(r, c, -1, -1)
+        ne_count = get_continuous_count(r, c, -1, 1)
+        sw_count = get_continuous_count(r, c, 1, -1)
         if (n_count + s_count + 1 >= 5) or (e_count + w_count + 1 >= 5) or \
                 (se_count + nw_count + 1 >= 5) or (ne_count + sw_count + 1 >= 5):
             self.winner = self.grid[r][c]
             self.game_over = True
-    def get_continuous_count(self, r, c, dr, dc):
-        piece = self.grid[r][c]
-        result = 0
-        i = 1
-        while True:
-            new_r = r + dr * i
-            new_c = c + dc * i
-            if 0 <= new_r < self.grid_count and 0 <= new_c < self.grid_count:
-                if self.grid[new_r][new_c] == piece:
-                    result += 1
-                else:
-                    break
-            else:
-                break
-            i += 1
-        return result
     def restart(self):
         for r in range(self.grid_count):
             for c in range(self.grid_count):
@@ -98,6 +100,7 @@ class Board:
         self.winner = None
         self.game_over = False
     def draw(self, screen):
+        # board and lines
         pygame.draw.rect(screen, (185, 122, 87),
                          [self.start_x - self.edge_size, self.start_y - self.edge_size,
                           (self.grid_count - 1) * self.grid_size + self.edge_size * 2, (self.grid_count - 1) * self.grid_size + self.edge_size * 2], 0)
@@ -107,6 +110,12 @@ class Board:
         for c in range(self.grid_count):
             x = self.start_x + c * self.grid_size
             pygame.draw.line(screen, (0, 0, 0), [x, self.start_y], [x, self.start_y + self.grid_size * (self.grid_count - 1)], 2)
+        # coordinates
+        font = pygame.font.SysFont("comicsansms", 20)
+        for i in range(19):
+            screen.blit(font.render("{}".format(i), True, (0, 0, 0)), (5, 35 + i*26))
+            screen.blit(font.render("{}".format(i), True, (0, 0, 0)), (25 + i*26, 515))
+        # pieces
         for r in range(self.grid_count):
             for c in range(self.grid_count):
                 piece = self.grid[r][c]

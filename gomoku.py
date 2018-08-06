@@ -2,7 +2,9 @@ import pygame
 from pygame.locals import *
 from board import *
 
+# main driver program for pygame
 class Gomoku():
+    # game settings and init
     def __init__(self):
         pygame.init()
         self.screen = pygame.display.set_mode((530, 550))
@@ -20,6 +22,7 @@ class Gomoku():
             self.clock.tick(60)
         print("Game finished.")
         pygame.quit()
+    # game controls
     def update(self):
         if self.auto:
             self.board.autoplay()
