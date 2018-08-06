@@ -1,2 +1,1 @@
-figure out old gomoku code -- comment some stuff
-look into improving old mcts
+integrate my pure mcts back into gomku and test it out
