@@ -18,6 +18,7 @@ class Pure_MCTS:
         counter = 0
         while counter < 100:
             counter += 1
+            print "counter:", counter
             node_to_sim = self.tree_policy(self.root)
             winning_player = self.default_policy(node_to_sim)
             self.backup(node_to_sim, winning_player)
@@ -119,8 +120,12 @@ class Node:
         self.parent = None
         self.action_children = {} # maps: actions -> nodes containing next state
 
-        self.all_actions = set(state.possible_actions())
-        self.untried_actions = set(state.possible_actions())
+        possible_actions = state.possible_actions()
+        if len(possible_actions) == 0:
+            print "POSSIBLE ACTIONS IS 0"
+            raise RuntimeError
+        self.all_actions = set(possible_actions)
+        self.untried_actions = set(possible_actions)
 
         # stats
         self.visits = 0
@@ -138,7 +143,8 @@ class Node:
     """
     def rand_action(self):
         import random
-        rand_action = list(self.all_actions)[random.randint(0, len(self.all_actions))]
+        index = random.randint(0, len(self.all_actions)-1)
+        rand_action = list(self.all_actions)[index]
         return rand_action
 
     """
@@ -147,7 +153,8 @@ class Node:
     """
     def rand_untried_action(self, rm=False):
         import random
-        rand_untried_action = list(self.untried_actions)[random.randint(0, len(self.untried_actions) - 1)]
+        index = random.randint(0, len(self.untried_actions) - 1)
+        rand_untried_action = list(self.untried_actions)[index]
         if rm:
             self.untried_actions.remove(rand_untried_action)
         return rand_untried_action
@@ -161,6 +168,124 @@ state:
 - terminal: bool - whether or not a player has won the game (must be correct on init)
 - winning_player: player - (must be non null if terminal == true)
 
-- possible_actions() -> set - set of possible actions (called by Node at init to init untried_actions)
+- possible_actions() -> set - non-empty set of possible actions (called by Node at init to init untried_actions)
 - apply_action(action) -> state - next state (should not modify the state)
 """
+
+class State:
+    def __init__(self, curr_player, terminal, winning_player):
+        self.curr_player = curr_player
+        self.terminal = terminal
+        self.winning_player = winning_player
+
+    def possible_actions(self):
+        raise NotImplementedError
+
+    def apply_action(self, action):
+        raise NotImplementedError
+
+
+class GomokuState(State):
+
+    def __init__(self, grid, curr_player, prev_move):
+        self.grid = grid
+        self.maxrc = len(grid)-1
+        self.grid_size = 26
+        self.grid_count = 19
+        self.options = self.get_options() # must be called before check_win
+
+        if prev_move is None:
+            (terminal, winning_player) = (False, None)
+        else:
+            (terminal, winning_player) = self.check_win(prev_move[0], prev_move[1])
+        State.__init__(self, curr_player, terminal, winning_player)
+
+    def possible_actions(self):
+        return set(self.options)
+
+    """
+    returns GomokuState - new instance of next state after applying action
+    """
+    def apply_action(self, action):
+        import copy
+        (r, c) = action
+        # TODO: optimize
+        next_grid = copy.deepcopy(self.grid)
+        if next_grid[r][c] == '.':
+            next_grid[r][c] = self.curr_player
+            next_player = 'w' if self.curr_player == 'b' else 'b'
+            next_state = GomokuState(next_grid, next_player, action)
+            return next_state
+        else:
+            print "Bad action"
+            return None
+
+    """
+    returns list - list of reasonable actions
+    """
+    def get_options(self):
+        grid = self.grid
+        #collect all occupied spots
+        current_pcs = []
+        for r in range(len(grid)):
+            for c in range(len(grid)):
+                if not grid[r][c] == '.':
+                    current_pcs.append((r,c))
+        #At the beginning of the game, curernt_pcs is empty
+        if not current_pcs:
+            return [(self.maxrc/2, self.maxrc/2)]
+        #Reasonable moves should be close to where the current players are
+        #Think about what these calculations are doing
+        #min(list, key=lambda x: x[0]) picks the element with the min value on the first dimension
+        min_r = max(0, min(current_pcs, key=lambda x: x[0])[0]-1)
+        max_r = min(self.maxrc, max(current_pcs, key=lambda x: x[0])[0]+1)
+        min_c = max(0, min(current_pcs, key=lambda x: x[1])[1]-1)
+        max_c = min(self.maxrc, max(current_pcs, key=lambda x: x[1])[1]+1)
+        #Options of reasonable next step moves
+        options = []
+        for i in range(min_r, max_r+1):
+            for j in range(min_c, max_c+1):
+                if not (i, j) in current_pcs:
+                    options.append((i,j))
+        return options
+
+    """
+    checks for win via continuous count and filled board
+    returns (bool, player) - (terminal, winning_player)
+    """
+    def check_win(self, r, c):
+        if len(self.options) == 0:
+            #In the unlikely event that no one wins before board is filled
+            #Make white win since black moved first
+            return (True, 'w')
+
+        # check continuous counts TODO: optimize
+        n_count = self.get_continuous_count(r, c, -1, 0)
+        s_count = self.get_continuous_count(r, c, 1, 0)
+        e_count = self.get_continuous_count(r, c, 0, 1)
+        w_count = self.get_continuous_count(r, c, 0, -1)
+        se_count = self.get_continuous_count(r, c, 1, 1)
+        nw_count = self.get_continuous_count(r, c, -1, -1)
+        ne_count = self.get_continuous_count(r, c, -1, 1)
+        sw_count = self.get_continuous_count(r, c, 1, -1)
+        if (n_count + s_count + 1 >= 5) or (e_count + w_count + 1 >= 5) or \
+                (se_count + nw_count + 1 >= 5) or (ne_count + sw_count + 1 >= 5):
+            return (True, self.grid[r][c])
+        return (False, None)
+
+    def get_continuous_count(self, r, c, dr, dc):
+        player = self.grid[r][c]
+        result = 0
+        i = 1
+        while True:
+            new_r = r + dr * i
+            new_c = c + dc * i
+            if 0 <= new_r < self.grid_count and 0 <= new_c < self.grid_count:
+                if self.grid[new_r][new_c] == player:
+                    result += 1
+                else:
+                    break
+            else:
+                break
+            i += 1
+        return result

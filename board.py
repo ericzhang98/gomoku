@@ -2,6 +2,7 @@ from __future__ import print_function
 import pygame
 from randplay import *
 from mcts import *
+from pure_mcts import *
 
 # maintains current game state and interactions
 class Board:
@@ -41,12 +42,17 @@ class Board:
     def autoplay(self):
         #Two automatic players against each other
         if not self.game_over:
-        #TODO: Modify player1 to be use MCTS instead of Randplay
-            player1 = MCTS(self.grid, self.piece)
-            r,c = player1.make_move()
+
+            # player1 = MCTS(self.grid, self.piece)
+            # r,c = player1.make_move()
+            curr_state = GomokuState(self.grid, self.piece, None)
+            pure_mcts = Pure_MCTS(curr_state)
+            action = pure_mcts.uct_search()
+            (r, c) = action
+
             print("Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
-            self.check_win(r, c)    
+            self.check_win(r, c)
         if not self.game_over:
             player2 = Randplay(self.grid, self.piece)
             r,c = player2.make_move()
@@ -56,9 +62,14 @@ class Board:
     #Computer as one of the two players
     def semi_autoplay(self):
         if not self.game_over:
-            #Optional: Change this to MCTS AI and see whether you can win
-            player1 = MCTS(self.grid, self.piece)
-            r,c = player1.make_move()
+
+            # player1 = MCTS(self.grid, self.piece)
+            # r,c = player1.make_move()
+            curr_state = GomokuState(self.grid, self.piece, None)
+            pure_mcts = Pure_MCTS(curr_state)
+            action = pure_mcts.uct_search()
+            (r, c) = action
+
             print("Semi-Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
             self.check_win(r, c)
