@@ -16,7 +16,7 @@ class Pure_MCTS:
     """
     def uct_search(self):
         counter = 0
-        while counter < 100:
+        while counter < 1:
             counter += 1
             print "counter:", counter
             node_to_sim = self.tree_policy(self.root)
@@ -187,10 +187,17 @@ class State:
 
 class GomokuState(State):
 
-    def __init__(self, grid, curr_player, prev_move):
+    def __init__(self, grid, curr_player, prev_move, prev_prev_move, board=None):
         self.grid = grid
         self.grid_len = 19
         self.options = self.get_options() # must be called before check_win
+
+        self.board = board
+
+        self.prev_move = prev_move
+        self.prev_prev_move = prev_prev_move
+
+        print "prev move:", prev_move, " prev prev move:", prev_prev_move
 
         if prev_move is None:
             (terminal, winning_player) = (False, None)
@@ -212,7 +219,9 @@ class GomokuState(State):
         if next_grid[rc_to_ind(r,c)] == '.':
             next_grid[rc_to_ind(r,c)] = self.curr_player
             next_player = 'w' if self.curr_player == 'b' else 'b'
-            next_state = GomokuState(next_grid, next_player, action)
+            next_state = GomokuState(next_grid, next_player, action, self.prev_move, self.board)
+            if self.board:
+                self.board.set_piece(r,c)
             return next_state
         else:
             print "Bad action"
@@ -278,11 +287,8 @@ class GomokuState(State):
         while True:
             new_r = r + dr * i
             new_c = c + dc * i
-            if 0 <= new_r < self.grid_len and 0 <= new_c < self.grid_len:
-                if self.grid[rc_to_ind(new_r,new_c)] == player:
-                    result += 1
-                else:
-                    break
+            if 0 <= new_r < self.grid_len and 0 <= new_c < self.grid_len and self.grid[rc_to_ind(new_r,new_c)] == player:
+                result += 1
             else:
                 break
             i += 1

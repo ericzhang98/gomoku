@@ -15,6 +15,7 @@ class Board:
         self.winner = None
         self.game_over = False
         self.grid = []
+        self.history = [None, None]
         for i in range(self.grid_count):
             self.grid.append(list("." * self.grid_count))
     def handle_key_event(self, e):
@@ -29,6 +30,7 @@ class Board:
                 r = int(y // self.grid_size)
                 c = int(x // self.grid_size)
                 if self.set_piece(r, c):
+                    self.history.append((r,c))
                     self.check_win(r, c)
     def set_piece(self, r, c):
         if self.grid[r][c] == '.':
@@ -46,10 +48,11 @@ class Board:
             # player1 = MCTS(self.grid, self.piece)
             # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
-            curr_state = GomokuState(flat_grid, self.piece, None)
+            curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2])
             pure_mcts = Pure_MCTS(curr_state)
             action = pure_mcts.uct_search()
             (r, c) = action
+            self.history.append(action)
 
             print("Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
@@ -57,6 +60,7 @@ class Board:
         if not self.game_over:
             player2 = Randplay(self.grid, self.piece)
             r,c = player2.make_move()
+            self.history.append((r,c))
             print("Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
             self.check_win(r, c)
@@ -67,10 +71,11 @@ class Board:
             # player1 = MCTS(self.grid, self.piece)
             # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
-            curr_state = GomokuState(flat_grid, self.piece, None)
+            curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2], board=None)
             pure_mcts = Pure_MCTS(curr_state)
             action = pure_mcts.uct_search()
             (r, c) = action
+            self.history.append(action)
 
             print("Semi-Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
@@ -112,6 +117,7 @@ class Board:
         self.piece = 'b'
         self.winner = None
         self.game_over = False
+        self.history = [None, None]
     def draw(self, screen):
         # board and lines
         pygame.draw.rect(screen, (185, 122, 87),
