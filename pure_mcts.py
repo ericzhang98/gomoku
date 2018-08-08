@@ -189,9 +189,7 @@ class GomokuState(State):
 
     def __init__(self, grid, curr_player, prev_move):
         self.grid = grid
-        self.maxrc = len(grid)-1
-        self.grid_size = 26
-        self.grid_count = 19
+        self.grid_len = 19
         self.options = self.get_options() # must be called before check_win
 
         if prev_move is None:
@@ -210,9 +208,9 @@ class GomokuState(State):
         import copy
         (r, c) = action
         # TODO: optimize
-        next_grid = copy.deepcopy(self.grid)
-        if next_grid[r][c] == '.':
-            next_grid[r][c] = self.curr_player
+        next_grid = copy.copy(self.grid)
+        if next_grid[rc_to_ind(r,c)] == '.':
+            next_grid[rc_to_ind(r,c)] = self.curr_player
             next_player = 'w' if self.curr_player == 'b' else 'b'
             next_state = GomokuState(next_grid, next_player, action)
             return next_state
@@ -227,20 +225,20 @@ class GomokuState(State):
         grid = self.grid
         #collect all occupied spots
         current_pcs = []
-        for r in range(len(grid)):
-            for c in range(len(grid)):
-                if not grid[r][c] == '.':
+        for r in range(self.grid_len):
+            for c in range(self.grid_len):
+                if not grid[rc_to_ind(r,c)] == '.':
                     current_pcs.append((r,c))
         #At the beginning of the game, curernt_pcs is empty
         if not current_pcs:
-            return [(self.maxrc/2, self.maxrc/2)]
+            return [((self.grid_len-1)/2, (self.grid_len-1)/2)]
         #Reasonable moves should be close to where the current players are
         #Think about what these calculations are doing
         #min(list, key=lambda x: x[0]) picks the element with the min value on the first dimension
         min_r = max(0, min(current_pcs, key=lambda x: x[0])[0]-1)
-        max_r = min(self.maxrc, max(current_pcs, key=lambda x: x[0])[0]+1)
+        max_r = min(self.grid_len-1, max(current_pcs, key=lambda x: x[0])[0]+1)
         min_c = max(0, min(current_pcs, key=lambda x: x[1])[1]-1)
-        max_c = min(self.maxrc, max(current_pcs, key=lambda x: x[1])[1]+1)
+        max_c = min(self.grid_len-1, max(current_pcs, key=lambda x: x[1])[1]+1)
         #Options of reasonable next step moves
         options = []
         for i in range(min_r, max_r+1):
@@ -270,18 +268,18 @@ class GomokuState(State):
         sw_count = self.get_continuous_count(r, c, 1, -1)
         if (n_count + s_count + 1 >= 5) or (e_count + w_count + 1 >= 5) or \
                 (se_count + nw_count + 1 >= 5) or (ne_count + sw_count + 1 >= 5):
-            return (True, self.grid[r][c])
+            return (True, self.grid[rc_to_ind(r,c)])
         return (False, None)
 
     def get_continuous_count(self, r, c, dr, dc):
-        player = self.grid[r][c]
+        player = self.grid[rc_to_ind(r,c)]
         result = 0
         i = 1
         while True:
             new_r = r + dr * i
             new_c = c + dc * i
-            if 0 <= new_r < self.grid_count and 0 <= new_c < self.grid_count:
-                if self.grid[new_r][new_c] == player:
+            if 0 <= new_r < self.grid_len and 0 <= new_c < self.grid_len:
+                if self.grid[rc_to_ind(new_r,new_c)] == player:
                     result += 1
                 else:
                     break
@@ -289,3 +287,11 @@ class GomokuState(State):
                 break
             i += 1
         return result
+
+def rc_to_ind(r, c):
+    grid_len = 19
+    return grid_len*r + c
+
+def ind_to_rc(ind):
+    grid_len = 19
+    return ind // grid_len, ind % grid_len

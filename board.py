@@ -45,7 +45,8 @@ class Board:
 
             # player1 = MCTS(self.grid, self.piece)
             # r,c = player1.make_move()
-            curr_state = GomokuState(self.grid, self.piece, None)
+            flat_grid = reduce(lambda x,y: x+y, self.grid)
+            curr_state = GomokuState(flat_grid, self.piece, None)
             pure_mcts = Pure_MCTS(curr_state)
             action = pure_mcts.uct_search()
             (r, c) = action
@@ -65,7 +66,8 @@ class Board:
 
             # player1 = MCTS(self.grid, self.piece)
             # r,c = player1.make_move()
-            curr_state = GomokuState(self.grid, self.piece, None)
+            flat_grid = reduce(lambda x,y: x+y, self.grid)
+            curr_state = GomokuState(flat_grid, self.piece, None)
             pure_mcts = Pure_MCTS(curr_state)
             action = pure_mcts.uct_search()
             (r, c) = action
