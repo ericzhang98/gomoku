@@ -7,31 +7,43 @@ from pure_mcts import *
 # maintains current game state and interactions
 class Board:
     def __init__(self):
-        self.grid_size = 26
+        # game consts
+        self.grid_len = 7
+        self.win_amt = 4
+
+        # ui
+        self.grid_size = 56
         self.start_x, self.start_y = 30, 50
         self.edge_size = 0
-        self.grid_count = 19
+
+        # curr game state
         self.piece = 'b'
         self.winner = None
         self.game_over = False
         self.grid = []
         self.history = [None, None]
-        for i in range(self.grid_count):
-            self.grid.append(list("." * self.grid_count))
+        for i in range(self.grid_len):
+            self.grid.append(list("." * self.grid_len))
+
     def handle_key_event(self, e):
         origin_x = self.start_x - self.edge_size
         origin_y = self.start_y - self.edge_size
-        size = (self.grid_count - 1) * self.grid_size + self.edge_size * 2
+        size = (self.grid_len - 1) * self.grid_size + self.edge_size * 2
         pos = e.pos
         if origin_x <= pos[0] <= origin_x + size and origin_y <= pos[1] <= origin_y + size:
             if not self.game_over:
                 x = pos[0] - origin_x
                 y = pos[1] - origin_y
-                r = int(y // self.grid_size)
-                c = int(x // self.grid_size)
+                r = int((y+self.grid_size/2) // self.grid_size)
+                c = int((x+self.grid_size/2) // self.grid_size)
+                #print("Mouse event xy: ({}, {})".format(x, y))
+                print("Mouse event rc: ({}, {})".format(r, c))
                 if self.set_piece(r, c):
                     self.history.append((r,c))
                     self.check_win(r, c)
+                    return True
+        return False
+
     def set_piece(self, r, c):
         if self.grid[r][c] == '.':
             self.grid[r][c] = self.piece
@@ -89,7 +101,7 @@ class Board:
             while True:
                 new_r = r + dr * i
                 new_c = c + dc * i
-                if 0 <= new_r < self.grid_count and 0 <= new_c < self.grid_count:
+                if 0 <= new_r < self.grid_len and 0 <= new_c < self.grid_len:
                     if self.grid[new_r][new_c] == piece:
                         result += 1
                     else:
@@ -106,13 +118,13 @@ class Board:
         nw_count = get_continuous_count(r, c, -1, -1)
         ne_count = get_continuous_count(r, c, -1, 1)
         sw_count = get_continuous_count(r, c, 1, -1)
-        if (n_count + s_count + 1 >= 5) or (e_count + w_count + 1 >= 5) or \
-                (se_count + nw_count + 1 >= 5) or (ne_count + sw_count + 1 >= 5):
+        if (n_count + s_count + 1 >= self.win_amt) or (e_count + w_count + 1 >= self.win_amt) or \
+                (se_count + nw_count + 1 >= self.win_amt) or (ne_count + sw_count + 1 >= self.win_amt):
             self.winner = self.grid[r][c]
             self.game_over = True
     def restart(self):
-        for r in range(self.grid_count):
-            for c in range(self.grid_count):
+        for r in range(self.grid_len):
+            for c in range(self.grid_len):
                 self.grid[r][c] = '.'
         self.piece = 'b'
         self.winner = None
@@ -122,21 +134,21 @@ class Board:
         # board and lines
         pygame.draw.rect(screen, (185, 122, 87),
                          [self.start_x - self.edge_size, self.start_y - self.edge_size,
-                          (self.grid_count - 1) * self.grid_size + self.edge_size * 2, (self.grid_count - 1) * self.grid_size + self.edge_size * 2], 0)
-        for r in range(self.grid_count):
+                          (self.grid_len - 1) * self.grid_size + self.edge_size * 2, (self.grid_len - 1) * self.grid_size + self.edge_size * 2], 0)
+        for r in range(self.grid_len):
             y = self.start_y + r * self.grid_size
-            pygame.draw.line(screen, (0, 0, 0), [self.start_x, y], [self.start_x + self.grid_size * (self.grid_count - 1), y], 2)
-        for c in range(self.grid_count):
+            pygame.draw.line(screen, (0, 0, 0), [self.start_x, y], [self.start_x + self.grid_size * (self.grid_len - 1), y], 2)
+        for c in range(self.grid_len):
             x = self.start_x + c * self.grid_size
-            pygame.draw.line(screen, (0, 0, 0), [x, self.start_y], [x, self.start_y + self.grid_size * (self.grid_count - 1)], 2)
+            pygame.draw.line(screen, (0, 0, 0), [x, self.start_y], [x, self.start_y + self.grid_size * (self.grid_len - 1)], 2)
         # coordinates
         font = pygame.font.SysFont("comicsansms", 20)
-        for i in range(19):
-            screen.blit(font.render("{}".format(i), True, (0, 0, 0)), (5, 35 + i*26))
-            screen.blit(font.render("{}".format(i), True, (0, 0, 0)), (25 + i*26, 515))
+        for i in range(self.grid_len):
+            screen.blit(font.render("{}".format(i), True, (0, 0, 0)), (5, 35 + i*self.grid_size))
+            screen.blit(font.render("{}".format(i), True, (0, 0, 0)), (25 + i*self.grid_size, 515))
         # pieces
-        for r in range(self.grid_count):
-            for c in range(self.grid_count):
+        for r in range(self.grid_len):
+            for c in range(self.grid_len):
                 piece = self.grid[r][c]
                 if piece != '.':
                     if piece == 'b':

@@ -6,6 +6,7 @@ main mcts class
 - root: Node - init with root state
 - uct_search: action - best action from mcts
 """
+THINK_TIME = 5000
 class Pure_MCTS:
     def __init__(self, root_state):
         self.root = Node(root_state)
@@ -16,14 +17,21 @@ class Pure_MCTS:
     """
     def uct_search(self):
         counter = 0
-        while counter < 1:
+        while counter < THINK_TIME:
             counter += 1
-            print "counter:", counter
             node_to_sim = self.tree_policy(self.root)
             winning_player = self.default_policy(node_to_sim)
             self.backup(node_to_sim, winning_player)
+            if counter % 100 == 0:
+                action, child = self.wr_action_child(self.root)
+                print("best ac so far:({}, {})".format(action[0], action[1]))
 
-        action, child = self.best_action_child(self.root)
+        children = self.root.action_children.values()
+        children = sorted(children, key= lambda c: float(c.losses)/c.visits, reverse=True)
+        for child in children:
+            print("Action: {}, Wins: {}, Visits: {} WR: {}".format(child.state.prev_move, child.losses, child.visits, float(child.losses)/child.visits))
+
+        action, child = self.wr_action_child(self.root)
         return action
 
     """
@@ -32,11 +40,11 @@ class Pure_MCTS:
     """
     def tree_policy(self, node):
         while not node.terminal:
-            # ucb inf
+            # ucb val is technically inf
             if not node.fully_expanded():
                 return self.expand(node)
             else:
-                action, child = self.best_action_child(node)
+                action, child = self.ucb_action_child(node)
                 node = child
         return node
 
@@ -57,9 +65,9 @@ class Pure_MCTS:
 
     """
     ucb
-    returns (action, node) - best (action, child node) to explore
+    returns (action, node) - ucb optimal (action, child node) to explore
     """
-    def best_action_child(self, node):
+    def ucb_action_child(self, node):
         from math import sqrt, log
         best_val = -1
         best_action_child = None
@@ -69,6 +77,22 @@ class Pure_MCTS:
             ucb_val = float(child.losses)/child.visits + c*sqrt(2*log(node.visits)/child.visits)
             if ucb_val > best_val:
                 best_val = ucb_val
+                best_action_child = (action, child)
+        return best_action_child
+
+    """
+    action child with highest win rate (to be returned from uct search)
+    returns (action, node) - (action, child node) with highest win rate
+    """
+    def wr_action_child(self, node):
+        from math import sqrt, log
+        best_win_rate = -1
+        best_action_child = None
+        for action, child in node.action_children.items():
+            # child.losses = curr node's wins after taking the action, since children node's player is opponent
+            win_rate = float(child.losses)/child.visits
+            if win_rate > best_win_rate:
+                best_win_rate = win_rate
                 best_action_child = (action, child)
         return best_action_child
 
@@ -121,9 +145,9 @@ class Node:
         self.action_children = {} # maps: actions -> nodes containing next state
 
         possible_actions = state.possible_actions()
-        if len(possible_actions) == 0:
-            print "POSSIBLE ACTIONS IS 0"
-            raise RuntimeError
+        # if len(possible_actions) == 0:
+        #     print "POSSIBLE ACTIONS IS 0"
+            # raise RuntimeError
         self.all_actions = set(possible_actions)
         self.untried_actions = set(possible_actions)
 
@@ -184,20 +208,23 @@ class State:
     def apply_action(self, action):
         raise NotImplementedError
 
-
+GRID_LEN = 7
+DEBUG_BOARD = False
 class GomokuState(State):
 
     def __init__(self, grid, curr_player, prev_move, prev_prev_move, board=None):
         self.grid = grid
-        self.grid_len = 19
+        self.grid_len = GRID_LEN
+        self.win_amt = 4
         self.options = self.get_options() # must be called before check_win
 
-        self.board = board
+        if DEBUG_BOARD:
+            self.board = board #for visual debugging
+        else:
+            self.board = None
 
         self.prev_move = prev_move
         self.prev_prev_move = prev_prev_move
-
-        print "prev move:", prev_move, " prev prev move:", prev_prev_move
 
         if prev_move is None:
             (terminal, winning_player) = (False, None)
@@ -275,8 +302,8 @@ class GomokuState(State):
         nw_count = self.get_continuous_count(r, c, -1, -1)
         ne_count = self.get_continuous_count(r, c, -1, 1)
         sw_count = self.get_continuous_count(r, c, 1, -1)
-        if (n_count + s_count + 1 >= 5) or (e_count + w_count + 1 >= 5) or \
-                (se_count + nw_count + 1 >= 5) or (ne_count + sw_count + 1 >= 5):
+        if (n_count + s_count + 1 >= self.win_amt) or (e_count + w_count + 1 >= self.win_amt) or \
+                (se_count + nw_count + 1 >= self.win_amt) or (ne_count + sw_count + 1 >= self.win_amt):
             return (True, self.grid[rc_to_ind(r,c)])
         return (False, None)
 
@@ -295,9 +322,9 @@ class GomokuState(State):
         return result
 
 def rc_to_ind(r, c):
-    grid_len = 19
+    grid_len = GRID_LEN
     return grid_len*r + c
 
 def ind_to_rc(ind):
-    grid_len = 19
+    grid_len = GRID_LEN
     return ind // grid_len, ind % grid_len

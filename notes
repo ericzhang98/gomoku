@@ -1,1 +1,1 @@
-integrate my pure mcts back into gomku and test it out
+fix the 4 in a row rush when a blocking move is necessary since opp is about to win

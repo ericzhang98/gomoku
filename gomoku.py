@@ -31,9 +31,12 @@ class Gomoku():
                 self.going = False
             if e.type == MOUSEBUTTONDOWN:
                 self.auto = False
-                self.board.handle_key_event(e)
-                if self.semiauto:
-                    self.board.semi_autoplay()
+                success = self.board.handle_key_event(e)
+                if success:
+                    if self.semiauto:
+                        self.board.semi_autoplay()
+                else:
+                    print "Bad mouse event"
             if e.type == KEYDOWN:
                 if e.key == K_RETURN:
                     self.auto = not self.auto
