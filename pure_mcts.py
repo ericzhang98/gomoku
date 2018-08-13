@@ -3,7 +3,7 @@
 import random
 from math import sqrt, log
 
-THINK_TIME = 5000
+THINK_TIME = 2000
 
 """
 PureMCTS --
