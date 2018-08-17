@@ -8,11 +8,11 @@ from gomoku_state import *
 class Board:
     def __init__(self):
         # game consts
-        self.grid_len = 7
-        self.win_amt = 4
+        self.grid_len = GRID_LEN
+        self.win_amt = WIN_AMT
 
         # ui
-        self.grid_size = 56
+        self.grid_size = 46
         self.start_x, self.start_y = 30, 50
         self.edge_size = 0
 

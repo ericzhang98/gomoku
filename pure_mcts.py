@@ -26,10 +26,13 @@ class PureMCTS:
             node_to_sim = self.tree_policy(self.root)
             winning_player = self.default_policy(node_to_sim)
             self.backup(node_to_sim, winning_player)
+
+            # print child stats
             if counter % 100 == 0:
                 action, child = self.wr_action_child(self.root)
                 print("best ac so far:({}, {})".format(action[0], action[1]))
 
+        # print child stats
         children = self.root.action_children.values()
         children = sorted(children, key= lambda c: float(c.losses)/c.visits, reverse=True)
         for child in children:
@@ -72,15 +75,8 @@ class PureMCTS:
     returns (action, node) - ucb optimal (action, child node) to explore
     """
     def ucb_action_child(self, node):
-        best_val = -1
-        best_action_child = None
         c = 2
-        for action, child in node.action_children.items():
-            # child.losses = curr node's wins after taking the action, since children node's player is opponent
-            ucb_val = float(child.losses)/child.visits + c*sqrt(2*log(node.visits)/child.visits)
-            if ucb_val > best_val:
-                best_val = ucb_val
-                best_action_child = (action, child)
+        best_action_child = max(node.action_children.items(), key= lambda (action, child): float(child.losses)/child.visits + c*sqrt(2*log(node.visits)/child.visits))
         return best_action_child
 
     """
@@ -88,14 +84,7 @@ class PureMCTS:
     returns (action, node) - (action, child node) with highest win rate
     """
     def wr_action_child(self, node):
-        best_win_rate = -1
-        best_action_child = None
-        for action, child in node.action_children.items():
-            # child.losses = curr node's wins after taking the action, since children node's player is opponent
-            win_rate = float(child.losses)/child.visits
-            if win_rate > best_win_rate:
-                best_win_rate = win_rate
-                best_action_child = (action, child)
+        best_action_child = max(node.action_children.items(), key= lambda (action, child): float(child.losses)/child.visits)
         return best_action_child
 
     """

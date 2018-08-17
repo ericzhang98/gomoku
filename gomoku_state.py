@@ -2,6 +2,7 @@ from pure_mcts import State
 import copy
 
 GRID_LEN = 7
+WIN_AMT = 4
 DEBUG_BOARD = False
 
 class GomokuState(State):
@@ -9,7 +10,7 @@ class GomokuState(State):
     def __init__(self, grid, curr_player, prev_move, prev_prev_move, board=None):
         self.grid = grid
         self.grid_len = GRID_LEN
-        self.win_amt = 4
+        self.win_amt = WIN_AMT
         self.options = self.get_options() # must be called before check_win
 
         if DEBUG_BOARD:
