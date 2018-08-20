@@ -4,6 +4,7 @@ import numpy as np
 from math import sqrt, log
 
 THINK_TIME = 2000
+SELF_PLAY = False
 
 seed = np.random.randint(999999)
 print "Seed:", seed
@@ -24,9 +25,14 @@ class PureMCTS:
     returns action - best action
     """
     def uct_search(self):
+
+        action_probs = np.zeros(len(self.root.state.possible_actions))
+
         counter = 0
         while counter < THINK_TIME:
             counter += 1
+
+            # TODO: change tree_policy and default_policy to value state with value function nn
             node_to_sim = self.tree_policy(self.root)
             winning_player = self.default_policy(node_to_sim)
             self.backup(node_to_sim, winning_player)
@@ -42,7 +48,16 @@ class PureMCTS:
         for child in children:
             print("Action: {}, Wins: {}, Visits: {} WR: {}".format(child.state.prev_move, child.losses, child.visits, float(child.losses)/child.visits))
 
-        action, child = self.wr_action_child(self.root)
+        # action, child = self.wr_action_child(self.root)
+
+        actions, probs = self.action_probs(self.root)
+
+        if SELF_PLAY:
+            dirichlet = np.random.dirichlet(0.3 * np.ones(len(probs)))
+            action = np.random.choice(actions, p=(0.75*probs + 0.25*dirichlet))
+        else:
+            action = np.random.choice(actions, p=probs)
+
         return action
 
     """
@@ -69,7 +84,7 @@ class PureMCTS:
         rand_untried_action = node.rand_untried_action(rm=True)
         # make child node with next state + add edges
         next_state = node.state.apply_action(rand_untried_action)
-        child_node = Node(next_state)
+        child_node = Node(next_state, prior=self.value_policy(next_state))
         child_node.parent = node
         node.action_children[rand_untried_action] = child_node
         return child_node
@@ -89,6 +104,27 @@ class PureMCTS:
     def wr_action_child(self, node):
         best_action_child = max(node.action_children.items(), key= lambda (action, child): child.q_val())
         return best_action_child
+
+    def action_probs(self, node, temp=1):
+        actions = list(node.state.possible_actions())
+        visits = map(lambda action: node.action_children[action].visits, actions)
+
+        if node.state.possible_actions() != node.action_children.keys():
+            print "err: possible actions don't match action_children"
+
+        if temp == 1:
+            temp = 1e-3
+            def softmax(x):
+                probs = np.exp(x - np.max(x))
+                probs /= np.sum(probs)
+                return probs
+            probs = softmax(1.0/temp * np.log(np.array(visits) + 1e-10))
+        else:
+            best = np.argmax(visits)
+            probs = np.zeros(len(actions))
+            probs[best] = 1
+
+        return actions, probs
 
     """
     random simulation until a player wins
@@ -131,7 +167,7 @@ keeps track of state, actions, and stats info of the state
 - rand_untried_action() -> action
 """
 class Node:
-    def __init__(self, state):
+    def __init__(self, state, prior=-100):
         self.state = state
 
         self.terminal = state.terminal
@@ -149,6 +185,8 @@ class Node:
         self.visits = 0
         self.wins = 0
         self.losses = 0
+
+        self.prior = prior
 
     """
     returns bool - whether or not the node is fully expanded
@@ -177,7 +215,8 @@ class Node:
 
     def ucb_val(self):
         c = 2
-        return float(self.losses)/self.visits + c*sqrt(2*log(self.parent.visits)/self.visits)
+        # return float(self.losses)/self.visits + c*sqrt(2*log(self.parent.visits)/self.visits)
+        return float(self.losses)/self.visits + c*self.prior*sqrt(self.parent.visits)/(1+self.visits)
 
     def q_val(self):
         return float(self.losses)/self.visits
