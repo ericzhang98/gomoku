@@ -9,6 +9,7 @@ SELF_PLAY = False
 seed = np.random.randint(999999)
 print "Seed:", seed
 np.random.seed(seed)
+# np.random.seed(61912)
 
 """
 PureMCTS --
@@ -16,48 +17,56 @@ main mcts class
 - root: Node - init with root state
 - uct_search: action - best action from mcts
 """
-class PureMCTS:
+class AlphaZeroMCTS:
     def __init__(self, root_state):
-        self.root = Node(root_state)
+        self.root = Node(root_state, 999999999)
 
     """
     main algo loop
-    returns action - best action
+    returns action - action sampled according to policy vector
     """
     def uct_search(self):
-
-        action_probs = np.zeros(len(self.root.state.possible_actions))
 
         counter = 0
         while counter < THINK_TIME:
             counter += 1
 
-            # TODO: change tree_policy and default_policy to value state with value function nn
-            node_to_sim = self.tree_policy(self.root)
-            winning_player = self.default_policy(node_to_sim)
-            self.backup(node_to_sim, winning_player)
+            # tree policy (choosing leaf node) is the same
+            node_to_eval = self.tree_policy(self.root)
+
+            # value policy returns score if game ended otherwise uses nn to evaluate
+            if node_to_eval.terminal:
+                value = 1 if node_to_eval.state.curr_player == node_to_eval.state.winning_player else -1
+            else:
+                winning_player = self.rollout(node_to_eval)
+                value = 0.1 if node_to_eval.state.curr_player == winning_player else -0.1
+
+            self.backup(node_to_eval, value)
 
             # print child stats
             if counter % 100 == 0:
-                action, child = self.wr_action_child(self.root)
-                print("best ac so far:({}, {})".format(action[0], action[1]))
+                actions, probs = self.action_probs(self.root)
+                action_probs = dict(zip(actions, probs))
+                children = self.root.action_children.values()
+                best = max(children, key= lambda c: c.visits)
+                print("best ac so far: {}, Visits: {} Qval: {} Prob: {}".format(best.state.prev_move, best.visits, -best.q_val(), action_probs[best.state.prev_move]))
+
+        actions, probs = self.action_probs(self.root)
+        action_probs = dict(zip(actions, probs))
 
         # print child stats
         children = self.root.action_children.values()
-        children = sorted(children, key= lambda c: c.q_val(), reverse=True)
+        children = sorted(children, key= lambda c: c.visits, reverse=True)
         for child in children:
-            print("Action: {}, Wins: {}, Visits: {} WR: {}".format(child.state.prev_move, child.losses, child.visits, float(child.losses)/child.visits))
-
-        # action, child = self.wr_action_child(self.root)
-
-        actions, probs = self.action_probs(self.root)
+            print("Action: {}, Visits: {} Qval: {} Prob: {}".format(child.state.prev_move, child.visits, -child.q_val(), action_probs[child.state.prev_move]))
 
         if SELF_PLAY:
             dirichlet = np.random.dirichlet(0.3 * np.ones(len(probs)))
-            action = np.random.choice(actions, p=(0.75*probs + 0.25*dirichlet))
+            idx = np.random.choice(len(actions), p=(0.75*probs + 0.25*dirichlet))
         else:
-            action = np.random.choice(actions, p=probs)
+            idx = np.random.choice(len(actions), p=probs)
 
+        action = actions[idx]
         return action
 
     """
@@ -84,7 +93,7 @@ class PureMCTS:
         rand_untried_action = node.rand_untried_action(rm=True)
         # make child node with next state + add edges
         next_state = node.state.apply_action(rand_untried_action)
-        child_node = Node(next_state, prior=self.value_policy(next_state))
+        child_node = Node(next_state, self.value_policy(next_state))
         child_node.parent = node
         node.action_children[rand_untried_action] = child_node
         return child_node
@@ -94,26 +103,23 @@ class PureMCTS:
     returns (action, node) - ucb optimal (action, child node) to explore
     """
     def ucb_action_child(self, node):
-        best_action_child = max(node.action_children.items(), key= lambda (action, child): child.ucb_val())
+        best_action_child = max(node.action_children.items(), key= lambda (action, child): -child.ucb_val())
         return best_action_child
 
     """
-    action child with highest win rate (to be returned from uct search)
-    returns (action, node) - (action, child node) with highest win rate
+    returns ([action], [float]) - policy vector for given node
     """
-    def wr_action_child(self, node):
-        best_action_child = max(node.action_children.items(), key= lambda (action, child): child.q_val())
-        return best_action_child
-
     def action_probs(self, node, temp=1):
         actions = list(node.state.possible_actions())
         visits = map(lambda action: node.action_children[action].visits, actions)
 
-        if node.state.possible_actions() != node.action_children.keys():
+        if node.state.possible_actions() != set(node.action_children.keys()):
             print "err: possible actions don't match action_children"
+            print node.state.possible_actions()
+            print node.action_children.keys()
 
         if temp == 1:
-            temp = 1e-3
+            temp = 1e-1
             def softmax(x):
                 probs = np.exp(x - np.max(x))
                 probs /= np.sum(probs)
@@ -130,27 +136,26 @@ class PureMCTS:
     random simulation until a player wins
     returns player - winning player
     """
-    def default_policy(self, node):
+    def rollout(self, node):
         while not node.terminal:
             rand_action = node.rand_action()
             next_state = node.state.apply_action(rand_action)
-            node = Node(next_state)
+            node = Node(next_state, 99999999999)
         return node.state.winning_player
+
+    def value_policy(self, node):
+        return 0
 
     """
     updates visits and wins count according to winning_player and reward function
     returns nothing
     """
-    def backup(self, node, winning_player):
+    def backup(self, node, reward):
         while node is not None:
             node.visits += 1
-            reward = self.reward(node, winning_player)
-            node.wins += reward
-            node.losses += (1 if reward == 0 else 0)
+            node.value += reward
+            reward = -reward
             node = node.parent
-
-    def reward(self, node, winning_player):
-        return 1 if winning_player == node.state.curr_player else 0
 
 
 """
@@ -167,7 +172,7 @@ keeps track of state, actions, and stats info of the state
 - rand_untried_action() -> action
 """
 class Node:
-    def __init__(self, state, prior=-100):
+    def __init__(self, state, prior):
         self.state = state
 
         self.terminal = state.terminal
@@ -183,8 +188,7 @@ class Node:
 
         # stats
         self.visits = 0
-        self.wins = 0
-        self.losses = 0
+        self.value = 0
 
         self.prior = prior
 
@@ -216,31 +220,7 @@ class Node:
     def ucb_val(self):
         c = 2
         # return float(self.losses)/self.visits + c*sqrt(2*log(self.parent.visits)/self.visits)
-        return float(self.losses)/self.visits + c*self.prior*sqrt(self.parent.visits)/(1+self.visits)
+        return self.q_val() + c*self.prior*sqrt(self.parent.visits)/(1+self.visits)
 
     def q_val(self):
-        return float(self.losses)/self.visits
-
-"""
-State interface:
-- curr_player: player - player that is going to make a move on the current state
-- terminal: bool - whether or not a player has won the game (must be correct on init)
-- winning_player: player - (must be non null if terminal == true)
-
-- possible_actions() -> set - non-empty set of possible actions (called by Node at init to init untried_actions)
-- apply_action(action) -> state - next state (should not modify the state)
-
-action: some hashable property used by apply_action to create a new next state
-"""
-
-class State:
-    def __init__(self, curr_player, terminal, winning_player):
-        self.curr_player = curr_player
-        self.terminal = terminal
-        self.winning_player = winning_player
-
-    def possible_actions(self):
-        raise NotImplementedError
-
-    def apply_action(self, action):
-        raise NotImplementedError
+        return float(self.value)/self.visits

@@ -1,8 +1,9 @@
 from __future__ import print_function
 import pygame
 from randplay import *
-from pure_mcts import *
+# from pure_mcts import *
 from gomoku_state import *
+from alphazero_mcts import *
 
 # maintains current game state and interactions
 class Board:
@@ -61,7 +62,7 @@ class Board:
             # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
             curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2])
-            pure_mcts = PureMCTS(curr_state)
+            pure_mcts = AlphaZeroMCTS(curr_state)
             action = pure_mcts.uct_search()
             (r, c) = action
             self.history.append(action)
@@ -84,7 +85,7 @@ class Board:
             # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
             curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2], board=None)
-            pure_mcts = PureMCTS(curr_state)
+            pure_mcts = AlphaZeroMCTS(curr_state)
             action = pure_mcts.uct_search()
             (r, c) = action
             self.history.append(action)

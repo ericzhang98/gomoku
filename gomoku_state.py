@@ -1,4 +1,4 @@
-from pure_mcts import State
+from state import State
 import copy
 
 GRID_LEN = 7
