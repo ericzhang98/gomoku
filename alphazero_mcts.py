@@ -15,6 +15,13 @@ main mcts class
 class AlphaZeroMCTS:
     def __init__(self, root_state):
         self.root = Node(root_state, 999999999)
+        model_file = 'best_policy_6_6_4.model'
+        import pickle
+        policy_params = pickle.load(open(model_file, 'rb'))
+        from gomoku_state import GRID_LEN
+        from policy_value_net_numpy import PolicyValueNetNumpy
+        nn = PolicyValueNetNumpy(GRID_LEN, GRID_LEN, policy_params)
+        self.policy_value_fn = nn.policy_value_fn
 
     """
     main algo loop
@@ -33,8 +40,8 @@ class AlphaZeroMCTS:
             if node_to_eval.terminal:
                 value = 1 if node_to_eval.state.curr_player == node_to_eval.state.winning_player else -1
             else:
-                winning_player = self.rollout(node_to_eval)
-                value = 0.1 if node_to_eval.state.curr_player == winning_player else -0.1
+                # value = 0.1 if node_to_eval.state.curr_player == self.rollout(node_to_eval) else -0.1
+                value = self.value_policy(node_to_eval.state)
 
             self.backup(node_to_eval, value)
 
@@ -44,7 +51,7 @@ class AlphaZeroMCTS:
                 action_probs = dict(zip(actions, probs))
                 children = self.root.action_children.values()
                 best = max(children, key= lambda c: c.visits)
-                print("best ac so far: {}, Visits: {} Qval: {}".format(best.state.prev_move, best.visits, -best.q_val()))
+                print("best ac so far: {}, Visits: {} Qval: {} Prior: {}".format(best.state.prev_move, best.visits, -best.q_val(), -best.prior))
 
         actions, probs = self.action_probs(self.root)
         action_probs = dict(zip(actions, probs))
@@ -53,7 +60,7 @@ class AlphaZeroMCTS:
         children = self.root.action_children.values()
         children = sorted(children, key= lambda c: c.visits, reverse=True)
         for child in children:
-            print("Action: {}, Visits: {} Qval: {}".format(child.state.prev_move, child.visits, -child.q_val()))
+            print("Action: {}, Visits: {} Qval: {} Prior: {}".format(child.state.prev_move, child.visits, -child.q_val(), -child.prior))
 
         if SELF_PLAY:
             dirichlet = np.random.dirichlet(0.3 * np.ones(len(probs)))
@@ -137,8 +144,12 @@ class AlphaZeroMCTS:
             node = Node(next_state, 99999999999)
         return node.state.winning_player
 
-    def value_policy(self, node):
-        return 0
+    def value_policy(self, state):
+        # return 0
+        from gomoku_state import NNBoardState
+        nn_board_state = NNBoardState(state)
+        act_probs, value = self.policy_value_fn(nn_board_state)
+        return value
 
     """
     updates visits and wins count according to winning_player and reward function

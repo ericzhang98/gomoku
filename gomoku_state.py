@@ -1,7 +1,7 @@
 from state import State
 import copy
 
-GRID_LEN = 7
+GRID_LEN = 6
 WIN_AMT = 4
 DEBUG_BOARD = False
 LIMIT_TO_WINNING_MOVE = False
@@ -181,3 +181,80 @@ def move_to_ind(move):
 def ind_to_move(ind):
     grid_len = GRID_LEN
     return ind // grid_len, ind % grid_len
+
+
+
+
+import numpy as np
+
+def bad_move_to_good_move(bad_move):
+    bad_location = ind_to_move(bad_move)
+    good_location = (GRID_LEN-1-bad_location[0], bad_location[1])
+    good_move = move_to_ind(good_location)
+    return good_move
+
+class NNBoardState(object):
+    """board for the game"""
+
+    def __init__(self, state):
+        self.width = GRID_LEN
+        self.height = GRID_LEN
+        self.n_in_row = int(WIN_AMT)
+        self.players = [1, 2]  # player1 and player2
+        self.current_player = state.curr_player
+        self.last_move = self.location_to_move((GRID_LEN-1-state.prev_move[0], state.prev_move[1]))
+        self.availables = list(range(self.width * self.height))
+        # board states stored as a dict,
+        # key: move
+        # value: player
+        self.states = {}
+        for i in range(len(state.grid)):
+            if state.grid[i] != '.':
+                bad_move = i
+                good_move = bad_move_to_good_move(bad_move)
+                self.states[good_move] = 1 if state.grid[i] == 'b' else 2
+
+
+
+    def move_to_location(self, move):
+        """
+        3*3 board's moves like:
+        6 7 8
+        3 4 5
+        0 1 2
+        and move 5's location is (1,2)
+        """
+        h = move // self.width
+        w = move % self.width
+        return [h, w]
+
+    def location_to_move(self, location):
+        if len(location) != 2:
+            return -1
+        h = location[0]
+        w = location[1]
+        move = h * self.width + w
+        if move not in range(self.width * self.height):
+            return -1
+        return move
+
+    def current_state(self):
+        """return the board state from the perspective of the current player.
+        state shape: 4*width*height
+        """
+
+        square_state = np.zeros((4, self.width, self.height))
+        if self.states:
+            moves, players = np.array(list(zip(*self.states.items())))
+            move_curr = moves[players == (1 if self.current_player == 'b' else 2)]
+            move_oppo = moves[players != (1 if self.current_player == 'b' else 2)]
+            square_state[0][move_curr // self.width,
+                            move_curr % self.height] = 1.0
+            square_state[1][move_oppo // self.width,
+                            move_oppo % self.height] = 1.0
+            # indicate the last move location
+            square_state[2][self.last_move // self.width,
+                            self.last_move % self.height] = 1.0
+        if len(self.states) % 2 == 0:
+            square_state[3][:, :] = 1.0  # indicate the colour to play
+        return square_state[:, ::-1, :]
