@@ -6,11 +6,6 @@ from math import sqrt, log
 THINK_TIME = 2000
 SELF_PLAY = False
 
-seed = np.random.randint(999999)
-print "Seed:", seed
-np.random.seed(seed)
-# np.random.seed(61912)
-
 """
 PureMCTS --
 main mcts class
@@ -49,7 +44,7 @@ class AlphaZeroMCTS:
                 action_probs = dict(zip(actions, probs))
                 children = self.root.action_children.values()
                 best = max(children, key= lambda c: c.visits)
-                print("best ac so far: {}, Visits: {} Qval: {} Prob: {}".format(best.state.prev_move, best.visits, -best.q_val(), action_probs[best.state.prev_move]))
+                print("best ac so far: {}, Visits: {} Qval: {}".format(best.state.prev_move, best.visits, -best.q_val()))
 
         actions, probs = self.action_probs(self.root)
         action_probs = dict(zip(actions, probs))
@@ -58,7 +53,7 @@ class AlphaZeroMCTS:
         children = self.root.action_children.values()
         children = sorted(children, key= lambda c: c.visits, reverse=True)
         for child in children:
-            print("Action: {}, Visits: {} Qval: {} Prob: {}".format(child.state.prev_move, child.visits, -child.q_val(), action_probs[child.state.prev_move]))
+            print("Action: {}, Visits: {} Qval: {}".format(child.state.prev_move, child.visits, -child.q_val()))
 
         if SELF_PLAY:
             dirichlet = np.random.dirichlet(0.3 * np.ones(len(probs)))
@@ -109,7 +104,7 @@ class AlphaZeroMCTS:
     """
     returns ([action], [float]) - policy vector for given node
     """
-    def action_probs(self, node, temp=1):
+    def action_probs(self, node, temp=0):
         actions = list(node.state.possible_actions())
         visits = map(lambda action: node.action_children[action].visits, actions)
 
@@ -118,17 +113,16 @@ class AlphaZeroMCTS:
             print node.state.possible_actions()
             print node.action_children.keys()
 
-        if temp == 1:
-            temp = 1e-1
+        if temp == 0:
+            best = np.argmax(visits)
+            probs = np.zeros(len(actions))
+            probs[best] = 1
+        else:
             def softmax(x):
                 probs = np.exp(x - np.max(x))
                 probs /= np.sum(probs)
                 return probs
             probs = softmax(1.0/temp * np.log(np.array(visits) + 1e-10))
-        else:
-            best = np.argmax(visits)
-            probs = np.zeros(len(actions))
-            probs[best] = 1
 
         return actions, probs
 

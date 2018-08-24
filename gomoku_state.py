@@ -4,6 +4,7 @@ import copy
 GRID_LEN = 7
 WIN_AMT = 4
 DEBUG_BOARD = False
+LIMIT_TO_WINNING_MOVE = False
 
 class GomokuState(State):
 
@@ -24,10 +25,11 @@ class GomokuState(State):
         # check win for opponent
         terminal, winning_player = self.check_win(prev_move)
 
-        # check guaranteed winning move for current player
-        almost_win, win_option = self.get_win_info(prev_prev_move)
-        if almost_win:
-            self.options = [win_option]
+        if LIMIT_TO_WINNING_MOVE:
+            # check guaranteed winning move for current player
+            almost_win, win_option = self.get_win_info(prev_prev_move)
+            if almost_win:
+                self.options = [win_option]
 
         State.__init__(self, curr_player, terminal, winning_player)
 

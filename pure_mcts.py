@@ -5,10 +5,6 @@ from math import sqrt, log
 
 THINK_TIME = 2000
 
-seed = np.random.randint(999999)
-print "Seed:", seed
-np.random.seed(seed)
-
 """
 PureMCTS --
 main mcts class

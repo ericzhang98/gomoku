@@ -1,9 +1,17 @@
 from __future__ import print_function
 import pygame
 from randplay import *
-# from pure_mcts import *
+from pure_mcts import PureMCTS
 from gomoku_state import *
-from alphazero_mcts import *
+from alphazero_mcts import AlphaZeroMCTS
+
+ALPHA_ZERO = True
+
+import numpy as np
+seed = np.random.randint(999999)
+print("Seed:", seed)
+np.random.seed(seed)
+# np.random.seed(61912)
 
 # maintains current game state and interactions
 class Board:
@@ -54,6 +62,7 @@ class Board:
                 self.piece = 'b'
             return True
         return False
+
     def autoplay(self):
         #Two automatic players against each other
         if not self.game_over:
@@ -62,8 +71,12 @@ class Board:
             # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
             curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2])
-            pure_mcts = AlphaZeroMCTS(curr_state)
-            action = pure_mcts.uct_search()
+            if ALPHA_ZERO:
+                alphazero_mcts = AlphaZeroMCTS(curr_state)
+                action = alphazero_mcts.uct_search()
+            else:
+                pure_mcts = PureMCTS(curr_state)
+                action = pure_mcts.uct_search()
             (r, c) = action
             self.history.append(action)
 
@@ -77,6 +90,7 @@ class Board:
             print("Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
             self.check_win(r, c)
+
     #Computer as one of the two players
     def semi_autoplay(self):
         if not self.game_over:
@@ -85,14 +99,19 @@ class Board:
             # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
             curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2], board=None)
-            pure_mcts = AlphaZeroMCTS(curr_state)
-            action = pure_mcts.uct_search()
+            if ALPHA_ZERO:
+                alphazero_mcts = AlphaZeroMCTS(curr_state)
+                action = alphazero_mcts.uct_search()
+            else:
+                pure_mcts = PureMCTS(curr_state)
+                action = pure_mcts.uct_search()
             (r, c) = action
             self.history.append(action)
 
             print("Semi-Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
             self.check_win(r, c)
+
     # check if a move causes a win
     def check_win(self, r, c):
         def get_continuous_count(r, c, dr, dc):
