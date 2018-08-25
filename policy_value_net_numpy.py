@@ -109,7 +109,7 @@ class PolicyValueNetNumpy():
                                 self.params[11], padding=0))
         X_v = relu(fc_forward(X_v.flatten(), self.params[12], self.params[13]))
         value = np.tanh(fc_forward(X_v, self.params[14], self.params[15]))[0]
-        from gomoku_state import bad_move_to_good_move
+        from gomoku_state import bad_move_to_good_move, ind_to_move
         good_legal_pos = map(bad_move_to_good_move, legal_positions)
-        act_probs = zip(good_legal_pos, act_probs.flatten()[legal_positions])
+        act_probs = zip(map(ind_to_move, good_legal_pos), act_probs.flatten()[legal_positions])
         return act_probs, value

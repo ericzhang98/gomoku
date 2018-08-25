@@ -5,6 +5,7 @@ GRID_LEN = 6
 WIN_AMT = 4
 DEBUG_BOARD = False
 LIMIT_TO_WINNING_MOVE = False
+LIMIT_TO_CLOSE_MOVE = False
 
 class GomokuState(State):
 
@@ -77,10 +78,16 @@ class GomokuState(State):
         max_c = min(self.grid_len-1, max(current_pcs, key=lambda x: x[1])[1]+1)
         #Options of reasonable next step moves
         options = []
-        for i in range(min_r, max_r+1):
-            for j in range(min_c, max_c+1):
-                if not (i, j) in current_pcs:
-                    options.append((i,j))
+        if LIMIT_TO_CLOSE_MOVE:
+            for i in range(min_r, max_r+1):
+                for j in range(min_c, max_c+1):
+                    if not (i, j) in current_pcs:
+                        options.append((i,j))
+        else:
+            for i in range(self.grid_len):
+                for j in range(self.grid_len):
+                    if not (i, j) in current_pcs:
+                        options.append((i,j))
         return options
 
     def get_win_info(self, prev_prev_move):

@@ -122,9 +122,9 @@ class PolicyValueNet():
         current_state = np.ascontiguousarray(board.current_state().reshape(
                 -1, 4, self.board_width, self.board_height))
         act_probs, value = self.policy_value(current_state)
-        from gomoku_state import bad_move_to_good_move
+        from gomoku_state import bad_move_to_good_move, ind_to_move
         good_legal_pos = map(bad_move_to_good_move, legal_positions)
-        act_probs = zip(good_legal_pos, act_probs[0][legal_positions])
+        act_probs = zip(map(ind_to_move, good_legal_pos), act_probs[0][legal_positions])
         return act_probs, value
 
     def train_step(self, state_batch, mcts_probs, winner_batch, lr):

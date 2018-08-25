@@ -45,23 +45,32 @@ class AlphaZeroMCTS:
 
             self.backup(node_to_eval, value)
 
-            # print child stats
-            if counter % 100 == 0:
-                actions, probs = self.action_probs(self.root)
-                action_probs = dict(zip(actions, probs))
-                children = self.root.action_children.values()
-                best = max(children, key= lambda c: c.visits)
-                print("best ac so far: {}, Visits: {} Qval: {} Prior: {}".format(best.state.prev_move, best.visits, -best.q_val(), -best.prior))
+            PRINT_SEARCH_LEADER = False
+            if PRINT_SEARCH_LEADER:
+                print "Child leader while running search---"
+                if counter % 100 == 0:
+                    actions, probs = self.action_probs(self.root)
+                    action_probs = dict(zip(actions, probs))
+                    children = self.root.action_children.values()
+                    best = max(children, key= lambda c: c.visits)
+                    print("best ac so far: {}, Visits: {} Qval: {} Prior: {}".format(best.state.prev_move, best.visits, -best.q_val(), -best.prior))
+
+        PRINT_PRIORS = True
+        if PRINT_PRIORS:
+            print "Priors---"
+            value, value_action_probs = self.value_policy(self.root.state, action_probs=True)
+            for a in sorted(value_action_probs, key=value_action_probs.get, reverse=True):
+                print("Action: {} Prior: {}".format(a, value_action_probs[a]))
+
+        PRINT_CHILD_STATS = True
+        if PRINT_CHILD_STATS:
+            print "Child stats---"
+            children = self.root.action_children.values()
+            children = sorted(children, key= lambda c: c.visits, reverse=True)
+            for child in children:
+                print("Action: {}, Visits: {} Qval: {} Prior: {}".format(child.state.prev_move, child.visits, -child.q_val(), -child.prior))
 
         actions, probs = self.action_probs(self.root)
-        action_probs = dict(zip(actions, probs))
-
-        # print child stats
-        children = self.root.action_children.values()
-        children = sorted(children, key= lambda c: c.visits, reverse=True)
-        for child in children:
-            print("Action: {}, Visits: {} Qval: {} Prior: {}".format(child.state.prev_move, child.visits, -child.q_val(), -child.prior))
-
         if SELF_PLAY:
             dirichlet = np.random.dirichlet(0.3 * np.ones(len(probs)))
             idx = np.random.choice(len(actions), p=(0.75*probs + 0.25*dirichlet))
@@ -79,26 +88,27 @@ class AlphaZeroMCTS:
         while not node.terminal:
             # ucb val is technically inf
             if not node.fully_expanded():
-                return self.expand(node)
+                self.expand_all(node)
+                return node
             else:
                 action, child = self.ucb_action_child(node)
                 node = child
         return node
 
     """
-    try an untried action and expand node (represents ucb returning inf)
+    fully expand node with priors from value_policy
     modifies: node.untried_actions, node.action_children
-    returns node - the newly expanded child node of og node
+    returns nothing
     """
-    def expand(self, node):
-        # choose random action in node's untried action set and rm from set
-        rand_untried_action = node.rand_untried_action(rm=True)
-        # make child node with next state + add edges
-        next_state = node.state.apply_action(rand_untried_action)
-        child_node = Node(next_state, self.value_policy(next_state))
-        child_node.parent = node
-        node.action_children[rand_untried_action] = child_node
-        return child_node
+    def expand_all(self, node):
+        node.untried_actions = set()
+        value, value_action_probs = self.value_policy(node.state, action_probs=True)
+        for action in node.all_actions:
+            # make child node with next state + add edges
+            next_state = node.state.apply_action(action)
+            child_node = Node(next_state, -value_action_probs[action])
+            child_node.parent = node
+            node.action_children[action] = child_node
 
     """
     ucb
@@ -144,11 +154,13 @@ class AlphaZeroMCTS:
             node = Node(next_state, 99999999999)
         return node.state.winning_player
 
-    def value_policy(self, state):
+    def value_policy(self, state, action_probs=False):
         # return 0
         from gomoku_state import NNBoardState
         nn_board_state = NNBoardState(state)
         act_probs, value = self.policy_value_fn(nn_board_state)
+        if action_probs:
+            return value, dict(act_probs)
         return value
 
     """
@@ -172,7 +184,7 @@ keeps track of state, actions, and stats info of the state
 - action_children: dict - maps: action -> child node
 - all_actions: set - const set of actions
 - untried_actions: set - set of untried actions
-- full_expanded() -> bool
+- fully_expanded() -> bool
 - rand_action() -> action
 - rand_untried_action() -> action
 """
@@ -223,9 +235,9 @@ class Node:
         return rand_untried_action
 
     def ucb_val(self):
-        c = 2
+        c = 5
         # return float(self.losses)/self.visits + c*sqrt(2*log(self.parent.visits)/self.visits)
         return self.q_val() + c*self.prior*sqrt(self.parent.visits)/(1+self.visits)
 
     def q_val(self):
-        return float(self.value)/self.visits
+        return float(self.value)/self.visits if self.visits > 0 else 0
