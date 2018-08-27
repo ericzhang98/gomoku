@@ -1,14 +1,7 @@
 from state import State
 import copy
 
-GRID_LEN = 8
-if GRID_LEN == 6:
-    WIN_AMT = 4
-else:
-    WIN_AMT = 5
-DEBUG_BOARD = False
-LIMIT_TO_WINNING_MOVE = False
-LIMIT_TO_CLOSE_MOVE = False
+from constants import *
 
 class GomokuState(State):
 
@@ -212,7 +205,7 @@ class NNBoardState(object):
         self.n_in_row = int(WIN_AMT)
         self.players = [1, 2]  # player1 and player2
         self.current_player = state.curr_player
-        self.last_move = self.location_to_move((GRID_LEN-1-state.prev_move[0], state.prev_move[1]))
+        self.last_move = self.location_to_move((GRID_LEN-1-state.prev_move[0], state.prev_move[1])) if state.prev_move else -1
         self.availables = list(range(self.width * self.height))
         # board states stored as a dict,
         # key: move

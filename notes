@@ -1,1 +1,4 @@
-fix the 4 in a row rush when a blocking move is necessary since opp is about to win
+prev move -1 is weird
+value network seems to favor player 1 even when player 2 is about to win
+hashmap for q_val/visits?
+advancing forward in tree

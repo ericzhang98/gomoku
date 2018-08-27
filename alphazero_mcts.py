@@ -3,8 +3,7 @@
 import numpy as np
 from math import sqrt, log
 
-THINK_TIME = 400
-SELF_PLAY = False
+from constants import *
 
 """
 PureMCTS --
@@ -78,7 +77,7 @@ class AlphaZeroMCTS:
                 print("Action: {}, Visits: {} Qval: {} Prior: {}".format(child.state.prev_move, child.visits, -child.q_val(), -child.prior))
 
         actions, probs = self.action_probs(self.root)
-        if SELF_PLAY:
+        if DIRICHLET_NOISE:
             dirichlet = np.random.dirichlet(0.3 * np.ones(len(probs)))
             idx = np.random.choice(len(actions), p=(0.75*probs + 0.25*dirichlet))
         else:
