@@ -1,5 +1,5 @@
 # Game constants
-GRID_LEN = 6
+GRID_LEN = 8
 if GRID_LEN == 6:
     WIN_AMT = 4
 else:

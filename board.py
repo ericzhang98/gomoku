@@ -63,45 +63,8 @@ class Board:
             return True
         return False
 
-    def autoplay(self):
-        #Two automatic players against each other
-        if not self.game_over:
-
-            flat_grid = reduce(lambda x,y: x+y, self.grid)
-            curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2])
-            if ALPHA_ZERO:
-                alphazero_mcts = AlphaZeroMCTS(curr_state)
-                action = alphazero_mcts.uct_search()
-            else:
-                pure_mcts = PureMCTS(curr_state)
-                action = pure_mcts.uct_search()
-            (r, c) = action
-            self.history.append(action)
-
-            print("Auto", self.piece, "move: (", r, ",", c, ")")
-            self.set_piece(r, c)
-            self.check_win(r, c)
-
-        if not self.game_over:
-
-            flat_grid = reduce(lambda x,y: x+y, self.grid)
-            curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2])
-            if ALPHA_ZERO:
-                alphazero_mcts = AlphaZeroMCTS(curr_state)
-                action = alphazero_mcts.uct_search()
-            else:
-                pure_mcts = PureMCTS(curr_state)
-                action = pure_mcts.uct_search()
-            (r, c) = action
-            self.history.append(action)
-
-            print("Auto", self.piece, "move: (", r, ",", c, ")")
-            self.set_piece(r, c)
-            self.check_win(r, c)
-
-
     #Computer as one of the two players
-    def semi_autoplay(self):
+    def mcts_play(self):
         if not self.game_over:
 
             flat_grid = reduce(lambda x,y: x+y, self.grid)
@@ -115,7 +78,7 @@ class Board:
             (r, c) = action
             self.history.append(action)
 
-            print("Semi-Auto", self.piece, "move: (", r, ",", c, ")")
+            print("MCTS", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
             self.check_win(r, c)
 

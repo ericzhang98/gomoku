@@ -62,19 +62,19 @@ class GomokuState(State):
                 move = (r,c)
                 if not grid[move_to_ind(move)] == '.':
                     current_pcs.append((r,c))
-        #At the beginning of the game, curernt_pcs is empty
-        if not current_pcs:
-            return [((self.grid_len-1)/2, (self.grid_len-1)/2)]
-        #Reasonable moves should be close to where the current players are
-        #Think about what these calculations are doing
-        #min(list, key=lambda x: x[0]) picks the element with the min value on the first dimension
-        min_r = max(0, min(current_pcs, key=lambda x: x[0])[0]-1)
-        max_r = min(self.grid_len-1, max(current_pcs, key=lambda x: x[0])[0]+1)
-        min_c = max(0, min(current_pcs, key=lambda x: x[1])[1]-1)
-        max_c = min(self.grid_len-1, max(current_pcs, key=lambda x: x[1])[1]+1)
         #Options of reasonable next step moves
         options = []
         if LIMIT_TO_CLOSE_MOVE:
+            #At the beginning of the game, curernt_pcs is empty
+            if not current_pcs:
+                return [((self.grid_len-1)/2, (self.grid_len-1)/2)]
+            #Reasonable moves should be close to where the current players are
+            #Think about what these calculations are doing
+            #min(list, key=lambda x: x[0]) picks the element with the min value on the first dimension
+            min_r = max(0, min(current_pcs, key=lambda x: x[0])[0]-1)
+            max_r = min(self.grid_len-1, max(current_pcs, key=lambda x: x[0])[0]+1)
+            min_c = max(0, min(current_pcs, key=lambda x: x[1])[1]-1)
+            max_c = min(self.grid_len-1, max(current_pcs, key=lambda x: x[1])[1]+1)
             for i in range(min_r, max_r+1):
                 for j in range(min_c, max_c+1):
                     if not (i, j) in current_pcs:
