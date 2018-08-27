@@ -67,8 +67,6 @@ class Board:
         #Two automatic players against each other
         if not self.game_over:
 
-            # player1 = MCTS(self.grid, self.piece)
-            # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
             curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2])
             if ALPHA_ZERO:
@@ -95,8 +93,6 @@ class Board:
     def semi_autoplay(self):
         if not self.game_over:
 
-            # player1 = MCTS(self.grid, self.piece)
-            # r,c = player1.make_move()
             flat_grid = reduce(lambda x,y: x+y, self.grid)
             curr_state = GomokuState(flat_grid, self.piece, self.history[-1], self.history[-2], board=None)
             if ALPHA_ZERO:
@@ -111,6 +107,8 @@ class Board:
             print("Semi-Auto", self.piece, "move: (", r, ",", c, ")")
             self.set_piece(r, c)
             self.check_win(r, c)
+
+            # asdf = AlphaZeroMCTS(GomokuState(reduce(lambda x,y: x+y, self.grid), self.piece, self.history[-1], self.history[-2], board=None))
 
     # check if a move causes a win
     def check_win(self, r, c):

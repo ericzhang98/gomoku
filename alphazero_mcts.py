@@ -3,7 +3,7 @@
 import numpy as np
 from math import sqrt, log
 
-THINK_TIME = 2000
+THINK_TIME = 400
 SELF_PLAY = False
 
 """
@@ -15,13 +15,19 @@ main mcts class
 class AlphaZeroMCTS:
     def __init__(self, root_state):
         self.root = Node(root_state, 999999999)
-        model_file = 'best_policy_6_6_4.model'
-        import pickle
-        policy_params = pickle.load(open(model_file, 'rb'))
+        # policy value function from pretrained model
         from gomoku_state import GRID_LEN
         from policy_value_net_numpy import PolicyValueNetNumpy
+        if GRID_LEN == 6:
+            model_file = 'best_policy_6_6_4.model'
+        else:
+            model_file = 'best_policy_8_8_5.model'
+        import pickle
+        policy_params = pickle.load(open(model_file, 'rb'))
         nn = PolicyValueNetNumpy(GRID_LEN, GRID_LEN, policy_params)
         self.policy_value_fn = nn.policy_value_fn
+
+        # print "AlphaZeroMCTS init. Current state value:", self.value_policy(root_state)
 
     """
     main algo loop
@@ -38,6 +44,7 @@ class AlphaZeroMCTS:
 
             # value policy returns score if game ended otherwise uses nn to evaluate
             if node_to_eval.terminal:
+                # value should always be -1 since the the current player of a terminal node has just lost
                 value = 1 if node_to_eval.state.curr_player == node_to_eval.state.winning_player else -1
             else:
                 # value = 0.1 if node_to_eval.state.curr_player == self.rollout(node_to_eval) else -0.1
@@ -47,15 +54,15 @@ class AlphaZeroMCTS:
 
             PRINT_SEARCH_LEADER = False
             if PRINT_SEARCH_LEADER:
-                print "Child leader while running search---"
                 if counter % 100 == 0:
+                    print "Child leader while running search---"
                     actions, probs = self.action_probs(self.root)
                     action_probs = dict(zip(actions, probs))
                     children = self.root.action_children.values()
                     best = max(children, key= lambda c: c.visits)
                     print("best ac so far: {}, Visits: {} Qval: {} Prior: {}".format(best.state.prev_move, best.visits, -best.q_val(), -best.prior))
 
-        PRINT_PRIORS = True
+        PRINT_PRIORS = False
         if PRINT_PRIORS:
             print "Priors---"
             value, value_action_probs = self.value_policy(self.root.state, action_probs=True)
@@ -154,6 +161,11 @@ class AlphaZeroMCTS:
             node = Node(next_state, 99999999999)
         return node.state.winning_player
 
+    """
+    value of the state (from the perspective of curr player) according to nn
+    returns float - value
+    or (float, action -> float) - (value, action probability vector)
+    """
     def value_policy(self, state, action_probs=False):
         # return 0
         from gomoku_state import NNBoardState

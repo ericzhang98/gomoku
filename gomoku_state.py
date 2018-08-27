@@ -1,8 +1,11 @@
 from state import State
 import copy
 
-GRID_LEN = 6
-WIN_AMT = 4
+GRID_LEN = 8
+if GRID_LEN == 6:
+    WIN_AMT = 4
+else:
+    WIN_AMT = 5
 DEBUG_BOARD = False
 LIMIT_TO_WINNING_MOVE = False
 LIMIT_TO_CLOSE_MOVE = False
