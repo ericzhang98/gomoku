@@ -1,6 +1,5 @@
 from __future__ import print_function
 import pygame
-from randplay import *
 from pure_mcts import PureMCTS
 from gomoku_state import *
 from alphazero_mcts import AlphaZeroMCTS

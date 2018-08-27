@@ -11,3 +11,8 @@ LIMIT_TO_CLOSE_MOVE = False
 # MCTS constants
 THINK_TIME = 400
 DIRICHLET_NOISE = False
+
+# Logging info constants
+PRINT_CHILD_STATS = True
+PRINT_PRIORS = False
+PRINT_SEARCH_LEADER = False

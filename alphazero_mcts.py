@@ -51,7 +51,6 @@ class AlphaZeroMCTS:
 
             self.backup(node_to_eval, value)
 
-            PRINT_SEARCH_LEADER = False
             if PRINT_SEARCH_LEADER:
                 if counter % 100 == 0:
                     print "Child leader while running search---"
@@ -61,14 +60,12 @@ class AlphaZeroMCTS:
                     best = max(children, key= lambda c: c.visits)
                     print("best ac so far: {}, Visits: {} Qval: {} Prior: {}".format(best.state.prev_move, best.visits, -best.q_val(), -best.prior))
 
-        PRINT_PRIORS = False
         if PRINT_PRIORS:
             print "Priors---"
             value, value_action_probs = self.value_policy(self.root.state, action_probs=True)
             for a in sorted(value_action_probs, key=value_action_probs.get, reverse=True):
                 print("Action: {} Prior: {}".format(a, value_action_probs[a]))
 
-        PRINT_CHILD_STATS = True
         if PRINT_CHILD_STATS:
             print "Child stats---"
             children = self.root.action_children.values()
